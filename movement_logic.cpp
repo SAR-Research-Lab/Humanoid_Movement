@@ -30,12 +30,25 @@ typedef enum
    E_NO_ROI
 }T_ROI_FROM_CENTER; 
 
+typedef enum
+{
+    E_PRINT_STOP,
+    E_PRINT_TURN_LEFT,
+    E_PRINT_TURN_RIGHT,
+    E_PRINT_NO_ROI,
+    E_PRINT_ROI_DATA,
+    E_PRINT_POINT_DATA
+
+}T_DEBUG_PRINT_MSG; 
+
 /*****************************************************
  *              Prototypes                           *
  *****************************************************/
 
 static T_ROI_FROM_CENTER get_CenterRelativePos(void); 
 static void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos); 
+static bool debounceImage(void); 
+static void debug_Print(T_DEBUG_PRINT_MSG myMsg); 
 
 /*****************************************************
  *              Topic callback                       *
@@ -45,14 +58,10 @@ static void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos);
  *****************************************************/
 static void roiCallback(sensor_msgs::RegionOfInterest myRoi)
 {
-#ifdef DEBUG    
-    ROS_INFO("ROI x: %d", myRoi.x_offset);  
-    ROS_INFO("ROI y: %d", myRoi.y_offset);
-    ROS_INFO("ROI w: %d", myRoi.width);  
-    ROS_INFO("ROI h: %d", myRoi.height);
-#endif
-    currentRoi = myRoi; 
-
+    ROS_INFO("AREA: %d", myRoi.width*myRoi.height); 
+    currentRoi = myRoi;
+    debug_Print(E_PRINT_ROI_DATA); 
+ 
 }
 
 /*****************************************************
@@ -63,11 +72,8 @@ static void roiCallback(sensor_msgs::RegionOfInterest myRoi)
  *****************************************************/
 static void pointCallback(geometry_msgs::Point myPoint)
 {
-#ifdef DEBUG
-    ROS_INFO("POINT x: %f", myPoint.x);  
-    ROS_INFO("POINT y: %f", myPoint.y); 
-#endif
-	imageCenterPoint = myPoint; 
+	imageCenterPoint = myPoint;
+    debug_Print(E_PRINT_POINT_DATA);  
 }
 
 
@@ -119,21 +125,32 @@ static void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos)
     switch(centerRelPos)
     {
         case E_CENTER_IN_ROI:
-            ROS_INFO("STOP!"); 
+            debug_Print(E_PRINT_STOP); 
             break;
         case E_CENTER_LEFT_OF_ROI:
-            ROS_INFO("TURN LEFT!");
+                debug_Print(E_PRINT_TURN_LEFT);
             break;
         case E_CENTER_RIGHT_OF_ROI:
-            ROS_INFO("TURN RIGHT!");
+            debug_Print(E_PRINT_TURN_RIGHT);
             break;
         case E_NO_ROI:
         default:
-            ROS_INFO("NO FACE!");
+            debug_Print(E_PRINT_NO_ROI);
             break;
 
     }
 
+}
+
+/*****************************************************
+ *              debounceImage                        *
+ *                                                   *
+ *                                                   *
+ *****************************************************/
+static bool debounceImage(void)
+{
+    
+    return(true); 
 }
 
 /*****************************************************
@@ -161,20 +178,55 @@ int main(int argc, char **argv)
    /* Set up the subscriber for the face detection results */ 
 
    /* Set up the rate */
-   ros:: Rate rate(10000); 
+   ros:: Rate rate(10); 
     
    while(ros::ok())
    { 
-     /* Trigger callback to fire and grab latest data */
-     ros::spinOnce();   
+      /* Trigger callback to fire and grab latest data */
+      ros::spinOnce();   
      
      /* Get the relative position of the image center point to the region of interest 
       * to determine which action to take.
       */
-      centerRelPos = get_CenterRelativePos(); 
-      send_ServoPosition(centerRelPos); 
+      if(debounceImage() == true)
+      {
+        centerRelPos = get_CenterRelativePos(); 
+        send_ServoPosition(centerRelPos); 
+      }
          
-     //ROS_INFO("Current position: %d", servoPositionState.servoGoalPosition);
-     rate.sleep();  
+      rate.sleep();  
    }
+}
+
+static void debug_Print(T_DEBUG_PRINT_MSG myMsg)
+{
+#ifdef DEBUG
+    switch(myMsg)
+    {
+        case E_PRINT_STOP: 
+            ROS_INFO("STOP!");
+            break;
+        case E_PRINT_TURN_LEFT:
+            ROS_INFO("TURN LEFT!");
+            break;
+        case E_PRINT_TURN_RIGHT:
+            ROS_INFO("TURN RIGHT!");
+            break;
+        case E_PRINT_NO_ROI:
+            ROS_INFO("NO FACE!");
+            break; 
+        case E_PRINT_ROI_DATA:
+            ROS_INFO("ROI x: %d", currentRoi.x_offset);  
+            ROS_INFO("ROI y: %d", currentRoi.y_offset);
+            ROS_INFO("ROI w: %d", currentRoi.width);  
+            ROS_INFO("ROI h: %d", currentRoi.height);
+            break; 
+        case E_PRINT_POINT_DATA:
+            ROS_INFO("POINT x: %f", imageCenterPoint.x);  
+            ROS_INFO("POINT y: %f", imageCenterPoint.y);
+            break;
+        default:
+            break;
+    }
+#endif
 }
