@@ -131,7 +131,7 @@ include ${catkin_INCLUDE_DIRS}
 ## The recommended prefix ensures that target names across packages don't collide
 # add_executable(${PROJECT_NAME}_node src/hello_ros_node.cpp)
 
-add_executable(movement_logic movement_logic.cpp)
+add_executable(movement_logic movement_logic.cpp movement_state_machine.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
