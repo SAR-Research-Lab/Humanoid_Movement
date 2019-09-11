@@ -16,6 +16,7 @@ static ros:: Subscriber point_sub;
 static ros:: Publisher servo_pub;
 static geometry_msgs::Point imageCenterPoint;
 static sensor_msgs::RegionOfInterest currentRoi; 
+static T_MOVEMENT_STATE current_state; 
 
 /*****************************************************
  *            Definitions                            *
@@ -30,25 +31,25 @@ typedef enum
     E_PRINT_TURN_RIGHT,
     E_PRINT_NO_ROI,
     E_PRINT_ROI_DATA,
-    E_PRINT_POINT_DATA
+    E_PRINT_POINT_DATA,
+    E_PRINT_CURRENT_STATE
 
 }T_DEBUG_PRINT_MSG; 
 
-typedef enum
+static char* state_array[E_MOVEMENT_COUNT] =
 {
-   E_CENTER_IN_ROI,
-   E_CENTER_LEFT_OF_ROI,
-   E_CENTER_RIGHT_OF_ROI,
-   E_NO_ROI
-}T_ROI_FROM_CENTER; 
+    "E_MOVEMENT_IDLE",
+    "E_MOVEMENT_LOOKING_FOR_FACE",
+    "E_MOVEMENT_FACE_DEBOUNCE",
+    "E_MOVEMENT_FACE_IN_MOTION",
+    "E_MOVEMENT_ARM_IN_MOTION"
+    
+};
 
 
 /*****************************************************
  *              Prototypes                           *
- *****************************************************/
-
-static T_ROI_FROM_CENTER get_CenterRelativePos(void); 
-static void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos);  
+ *****************************************************/ 
 static void debug_Print(T_DEBUG_PRINT_MSG myMsg);
 
 /*****************************************************
@@ -78,42 +79,6 @@ static void pointCallback(geometry_msgs::Point myPoint)
 }
 
 
-/*****************************************************
- *              get_CenterRelativePos                *
- *              Determines relative position         *
- *              of ROI from center                   *
- *              of the image                         *
- *****************************************************/
-static T_ROI_FROM_CENTER get_CenterRelativePos(void)
-{
-    T_ROI_FROM_CENTER result; 
-
-    /* Local Inits */
-    result = E_NO_ROI; 
-    
-    if((currentRoi.x_offset != 0) && (currentRoi.y_offset != 0) &&
-       (currentRoi.width != 0) && (currentRoi.height != 0))
-    {
-        /* Check if image center is bounded in the region of interest */
-        if((imageCenterPoint.x > currentRoi.x_offset) &&
-           (imageCenterPoint.x < currentRoi.x_offset + currentRoi.width) &&
-           (imageCenterPoint.y > currentRoi.y_offset) &&
-           (imageCenterPoint.y < currentRoi.y_offset + currentRoi.height))
-        {
-            result = E_CENTER_IN_ROI; 
-        }
-        else if(imageCenterPoint.x > (currentRoi.x_offset + currentRoi.width))
-        {
-            result = E_CENTER_RIGHT_OF_ROI; 
-        }
-        else
-        {
-            result = E_CENTER_LEFT_OF_ROI; 
-        }
-    }
-    
-    return(result); 
-}
 
 /*****************************************************
  *              send_ServoPosition                   *
@@ -121,7 +86,7 @@ static T_ROI_FROM_CENTER get_CenterRelativePos(void)
  *              based on various factors             *
  *                                                   *
  *****************************************************/
-static void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos)
+void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos)
 {
     switch(centerRelPos)
     {
@@ -129,7 +94,7 @@ static void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos)
             debug_Print(E_PRINT_STOP); 
             break;
         case E_CENTER_LEFT_OF_ROI:
-                debug_Print(E_PRINT_TURN_LEFT);
+            debug_Print(E_PRINT_TURN_LEFT);
             break;
         case E_CENTER_RIGHT_OF_ROI:
             debug_Print(E_PRINT_TURN_RIGHT);
@@ -149,11 +114,6 @@ static void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos)
  *****************************************************/
 int main(int argc, char **argv) 
 { 
-   T_ROI_FROM_CENTER centerRelPos; 
-
-   /* Local Inits */
-   centerRelPos = E_NO_ROI; 
-   
    /* Initialize the ROS system. */
    ros::init(argc, argv, "movement_logic_rebecca");
 
@@ -180,11 +140,9 @@ int main(int argc, char **argv)
       ros::spinOnce();   
 
       /* Send data to the state machine */
-      Movement_ManageStateMachine(currentRoi, imageCenterPoint);
-     
-      //TODO - Move to the state machine instead 
-      centerRelPos = get_CenterRelativePos(); 
-      send_ServoPosition(centerRelPos); 
+      current_state = Movement_ManageStateMachine(currentRoi, imageCenterPoint);
+
+      debug_Print(E_PRINT_CURRENT_STATE); 
          
       rate.sleep();  
    }
@@ -197,7 +155,7 @@ int main(int argc, char **argv)
  *****************************************************/
 static void debug_Print(T_DEBUG_PRINT_MSG myMsg)
 {
-#ifdef DEBUG
+#ifdef DEBUG    
     switch(myMsg)
     {
         case E_PRINT_STOP: 
@@ -222,6 +180,8 @@ static void debug_Print(T_DEBUG_PRINT_MSG myMsg)
             ROS_INFO("POINT x: %f", imageCenterPoint.x);  
             ROS_INFO("POINT y: %f", imageCenterPoint.y);
             break;
+        case E_PRINT_CURRENT_STATE:
+            ROS_INFO("CURRENT State: %s", state_array[current_state]); 
         default:
             break;
     }
