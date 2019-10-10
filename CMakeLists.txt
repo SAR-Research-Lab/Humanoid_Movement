@@ -103,6 +103,7 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES hello_ros
 	CATKIN_DEPENDS message_runtime
+	CATKIN_DEPENDS dynamixel_control
 #  DEPENDS system_lib
 )
 

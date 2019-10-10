@@ -55,6 +55,8 @@
   <depend>message_generation</depend>
   <depend>message_runtime</depend>
   <depend>dynamixel_control></depend>
+  <build_depend>dynamixel_control</build_depend>
+  <exec_depend>dynamixel_control</exec_depend>
 
   <!-- The export tag contains other, unspecified, tags -->
   <export>

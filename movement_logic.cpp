@@ -3,7 +3,7 @@
  *              Header Includes                      *
  *****************************************************/
 
-#include "dynamixel_control/ServoPosition.h"
+#include <dynamixel_control/ServoPosition.h>
 #include "movement_state_machine.h"
 
 /*****************************************************
@@ -94,9 +94,15 @@ void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos)
             debug_Print(E_PRINT_STOP); 
             break;
         case E_CENTER_LEFT_OF_ROI:
+            servoPositionState.servoClockWiseRotation = 0; 
+            servoPositionState.servoDegreeRotation = 1; 
+            servo_pub.publish(servoPositionState); 
             debug_Print(E_PRINT_TURN_LEFT);
             break;
         case E_CENTER_RIGHT_OF_ROI:
+            servoPositionState.servoClockWiseRotation = 1; 
+            servoPositionState.servoDegreeRotation = 1;
+            servo_pub.publish(servoPositionState);
             debug_Print(E_PRINT_TURN_RIGHT);
             break;
         case E_NO_ROI:
