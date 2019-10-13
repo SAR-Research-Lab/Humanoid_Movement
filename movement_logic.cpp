@@ -32,7 +32,8 @@ typedef enum
     E_PRINT_NO_ROI,
     E_PRINT_ROI_DATA,
     E_PRINT_POINT_DATA,
-    E_PRINT_CURRENT_STATE
+    E_PRINT_CURRENT_STATE,
+    E_PRINT_CENTER_SERVO, 
 
 }T_DEBUG_PRINT_MSG; 
 
@@ -42,7 +43,8 @@ static char* state_array[E_MOVEMENT_COUNT] =
     "E_MOVEMENT_LOOKING_FOR_FACE",
     "E_MOVEMENT_FACE_DEBOUNCE",
     "E_MOVEMENT_FACE_IN_MOTION",
-    "E_MOVEMENT_ARM_IN_MOTION"
+    "E_MOVEMENT_ARM_IN_MOTION",
+    "E_MOVEMENT_WAIT_FOR_SERVO_RESET" 
     
 };
 
@@ -88,6 +90,11 @@ static void pointCallback(geometry_msgs::Point myPoint)
  *****************************************************/
 void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos)
 {
+    /* Set default values */
+    servoPositionState.servoClockWiseRotation = 0;  /* Counterclockwise */
+    servoPositionState.servoDegreeRotation = 0;     /* Don't move */
+    servoPositionState.servoSetCenter = 0;          /* Dont't center */
+
     switch(centerRelPos)
     {
         case E_CENTER_IN_ROI:
@@ -104,6 +111,11 @@ void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos)
             servoPositionState.servoDegreeRotation = 1;
             servo_pub.publish(servoPositionState);
             debug_Print(E_PRINT_TURN_RIGHT);
+            break;
+        case E_RESET_SERVO:
+            servoPositionState.servoSetCenter = 1; 
+            servo_pub.publish(servoPositionState);
+            debug_Print(E_PRINT_CENTER_SERVO);
             break;
         case E_NO_ROI:
         default:
@@ -188,6 +200,10 @@ static void debug_Print(T_DEBUG_PRINT_MSG myMsg)
             break;
         case E_PRINT_CURRENT_STATE:
             ROS_INFO("CURRENT State: %s", state_array[current_state]); 
+            break;
+        case E_PRINT_CENTER_SERVO:
+            ROS_INFO("CENTERING SERVO!"); 
+            break; 
         default:
             break;
     }

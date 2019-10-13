@@ -8,24 +8,29 @@
 /*****************************************************
  *            Definitions                            *
  *****************************************************/
-
+/* Times are in seconds */
 #define THRESHOLD_PERCENT_MIN  0.8f
 #define THRESHOLD_PERCENT_MAX  1.2f
-#define FACE_DEBOUNCE_TIME     5
+#define FACE_DEBOUNCE_TIME     2
+#define FACE_IN_MOTION_TIME    3
 #define ARM_MOVEMENT_TIME      20
+#define FACE_RESET_TIME        3
 
 /*****************************************************
  *             File Scope Variables                  *
  *****************************************************/
 static T_MOVEMENT_STATE movement_CurrentState; 
 static sensor_msgs::RegionOfInterest LastRoi; 
-static double faceTimeDetected; 
+static double faceTimeDetected;
+static double faceInMotionTime;  
 static double armMovementTime;
+static double faceResetTime; 
 
 /*****************************************************
  *              Prototypes                           *
  *****************************************************/
 static void Movement_Idle(void); 
+static void Movement_WaitForReset(void); 
 static void Movement_SetArmInMotion(void);
 static void Movement_LookForFace(sensor_msgs::RegionOfInterest myRoi); 
 static void Movement_DebounceFace(sensor_msgs::RegionOfInterest myRoi);
@@ -46,6 +51,8 @@ void Movement_StateMachineInit(void)
     LastRoi.height        = 0;
     faceTimeDetected      = 0; 
     armMovementTime       = 0; 
+    faceResetTime         = 0; 
+    faceInMotionTime      = 0; 
 
 }
 
@@ -73,6 +80,8 @@ T_MOVEMENT_STATE Movement_ManageStateMachine(sensor_msgs::RegionOfInterest myRoi
         case E_MOVEMENT_ARM_IN_MOTION:
             Movement_SetArmInMotion(); 
             break;
+        case E_MOVEMENT_WAIT_FOR_SERVO_RESET:
+            Movement_WaitForReset();
         default:
             break; 
     }
@@ -91,7 +100,10 @@ static void Movement_Idle(void)
     LastRoi.y_offset      = 0;
     LastRoi.width         = 0;
     LastRoi.height        = 0;
-    faceTimeDetected      = 0;     
+    faceTimeDetected      = 0;  
+    armMovementTime       = 0; 
+    faceResetTime         = 0; 
+    faceInMotionTime      = 0; 
     movement_CurrentState = E_MOVEMENT_LOOKING_FOR_FACE; 
 }
 
@@ -162,6 +174,7 @@ static void Movement_DebounceFace(sensor_msgs::RegionOfInterest myRoi)
         {
             if((ros::Time::now().toSec() - faceTimeDetected) > FACE_DEBOUNCE_TIME)
             {
+                faceInMotionTime      = ros::Time::now().toSec();              
                 movement_CurrentState = E_MOVEMENT_FACE_IN_MOTION; 
             }
             
@@ -191,8 +204,10 @@ static void Movement_SetFaceInMotion(sensor_msgs::RegionOfInterest myRoi, geomet
     /* Send the servo position */    
     send_ServoPosition(centerRelPos); 
 
-    /* Stay here until we have centered the servo to the face */
-    if(centerRelPos == E_CENTER_IN_ROI)
+    /* Stay here until we have centered the servo to the face or 
+     * or we have timed out - if the person left, for example
+     */
+    if((centerRelPos == E_CENTER_IN_ROI) || ((ros::Time::now().toSec() - faceInMotionTime) > FACE_IN_MOTION_TIME))
     {
         armMovementTime       = ros::Time::now().toSec();  
         movement_CurrentState = E_MOVEMENT_ARM_IN_MOTION; 
@@ -208,9 +223,27 @@ static void Movement_SetFaceInMotion(sensor_msgs::RegionOfInterest myRoi, geomet
 static void Movement_SetArmInMotion(void)
 {
     if((ros::Time::now().toSec() - armMovementTime) > ARM_MOVEMENT_TIME)
-    {
-        movement_CurrentState = E_MOVEMENT_IDLE; 
+    {        
+        /* Center the servo */
+        send_ServoPosition(E_RESET_SERVO);
+        
+        /* Start the timer and wait for the servo to finish centering */
+        faceResetTime         = ros::Time::now().toSec();        
+        movement_CurrentState = E_MOVEMENT_WAIT_FOR_SERVO_RESET; 
     }
+}
+
+/*****************************************************
+ *              Movement_WaitForReset                *
+ *                                                   *
+ *                                                   *
+ *****************************************************/
+static void Movement_WaitForReset(void)
+{
+    if((ros::Time::now().toSec() - faceResetTime) > FACE_RESET_TIME)
+    { 
+        movement_CurrentState = E_MOVEMENT_IDLE; 
+    }   
 }
 
 /*****************************************************

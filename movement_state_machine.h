@@ -20,6 +20,7 @@ typedef enum
     E_MOVEMENT_FACE_DEBOUNCE,
     E_MOVEMENT_FACE_IN_MOTION,
     E_MOVEMENT_ARM_IN_MOTION,
+    E_MOVEMENT_WAIT_FOR_SERVO_RESET,
     E_MOVEMENT_COUNT
 }T_MOVEMENT_STATE;
 
@@ -28,7 +29,8 @@ typedef enum
    E_CENTER_IN_ROI,
    E_CENTER_LEFT_OF_ROI,
    E_CENTER_RIGHT_OF_ROI,
-   E_NO_ROI
+   E_NO_ROI,
+   E_RESET_SERVO
 }T_ROI_FROM_CENTER; 
 
 /*****************************************************
