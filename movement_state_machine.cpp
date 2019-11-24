@@ -207,8 +207,10 @@ static void Movement_SetFaceInMotion(sensor_msgs::RegionOfInterest myRoi, geomet
     /* Stay here until we have centered the servo to the face or 
      * or we have timed out - if the person left, for example
      */
-    if((centerRelPos == E_CENTER_IN_ROI) || ((ros::Time::now().toSec() - faceInMotionTime) > FACE_IN_MOTION_TIME))
+    if((centerRelPos == E_CENTER_IN_ROI)) //|| ((ros::Time::now().toSec() - faceInMotionTime) > FACE_IN_MOTION_TIME))
     {
+        /* Trigger the arm motion and then change states */
+        trigger_ArmMotion(); 
         armMovementTime       = ros::Time::now().toSec();  
         movement_CurrentState = E_MOVEMENT_ARM_IN_MOTION; 
     }

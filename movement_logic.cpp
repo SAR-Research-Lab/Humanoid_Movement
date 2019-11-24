@@ -2,7 +2,7 @@
 /*****************************************************
  *              Header Includes                      *
  *****************************************************/
-
+#include <std_msgs/Bool.h>
 #include <dynamixel_control/ServoPosition.h>
 #include "movement_state_machine.h"
 
@@ -14,6 +14,8 @@ static dynamixel_control::ServoPosition servoPositionState;
 static ros:: Subscriber roi_sub; 
 static ros:: Subscriber point_sub;
 static ros:: Publisher servo_pub;
+static ros:: Publisher arm_pub;
+static std_msgs::Bool arm_trigger;
 static geometry_msgs::Point imageCenterPoint;
 static sensor_msgs::RegionOfInterest currentRoi; 
 static T_MOVEMENT_STATE current_state; 
@@ -80,7 +82,17 @@ static void pointCallback(geometry_msgs::Point myPoint)
     debug_Print(E_PRINT_POINT_DATA);  
 }
 
-
+/*****************************************************
+ *              trigger_ArmMotion                    *
+ *              Sends the trigger command            *
+ *              to the arm node to send the          *
+ *              wave commands                        *
+ *****************************************************/
+void trigger_ArmMotion(void)
+{
+    arm_trigger.data = 1; 
+    arm_pub.publish(arm_trigger);
+}
 
 /*****************************************************
  *              send_ServoPosition                   *
@@ -141,8 +153,10 @@ int main(int argc, char **argv)
    /* Set up the subscriber for the face detected region of interest and center point */
    roi_sub   = nh.subscribe("/roi", 100, roiCallback);
    point_sub = nh.subscribe("/geometry_msgs", 100, pointCallback);
-
+   
+   /* Set up the publishers for the servo and the humanoid arm mover */
    servo_pub = nh.advertise<dynamixel_control::ServoPosition>("dynamixel_control_rebecca", 100);
+   arm_pub   = nh.advertise<std_msgs::Bool>("arm_commander", 100); 
 
    /* Set up the subscriber for the face detection results */ 
 

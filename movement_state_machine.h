@@ -39,5 +39,6 @@ typedef enum
 extern void Movement_StateMachineInit(void);
 extern T_MOVEMENT_STATE Movement_ManageStateMachine(sensor_msgs::RegionOfInterest myRoi, geometry_msgs::Point myPoint); 
 extern void send_ServoPosition(T_ROI_FROM_CENTER centerRelPos);
+extern void trigger_ArmMotion(void);
 
 #endif /*MOVEMENT_STATE_MACHINE_*/
